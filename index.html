@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+	<head>
+		<link href="css/style.css" rel="stylesheet" type="text/css"></link>
+		<title>gender</title>
+		<script src="js/glMatrix-0.9.5.min.js"></script>
+		<script src="js/webgl-utils.js"></script>
+		<script src="js/engine.js"></script>
+		<script src="js/models.js"></script>
+		<script src="js/texture.js"></script>
+		<script src="js/gender-slider.js"></script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			precision mediump float;
+			uniform sampler2D uSampler;
+			uniform int uUseLighting;
+			uniform float uAlpha;
+			varying vec3 vLightWeighting;
+			varying vec2 vTextureCoord;
+			uniform float uBlurKernel[9];
+			uniform float uBlurWeight;
+
+			void main(void) {
+				vec4 textureColor =  texture2D(uSampler, vTextureCoord + vec2(-1,-1))*uBlurKernel[0]+
+												texture2D(uSampler, vTextureCoord + vec2( 0,-1))*uBlurKernel[1]+
+												texture2D(uSampler, vTextureCoord + vec2( 1,-1))*uBlurKernel[2]+
+												texture2D(uSampler, vTextureCoord + vec2(-1, 0))*uBlurKernel[3]+
+												texture2D(uSampler, vTextureCoord + vec2( 0, 0))*uBlurKernel[4]+
+												texture2D(uSampler, vTextureCoord + vec2( 1, 0))*uBlurKernel[5]+
+												texture2D(uSampler, vTextureCoord + vec2(-1, 1))*uBlurKernel[6]+
+												texture2D(uSampler, vTextureCoord + vec2( 0, 1))*uBlurKernel[7]+
+												texture2D(uSampler, vTextureCoord + vec2( 1, 1))*uBlurKernel[8];
+				textureColor /= uBlurWeight;
+				if(uUseLighting==1) {
+					gl_FragColor = textureColor.rgba+vec4(vLightWeighting,textureColor.w);;
+				} else {
+					gl_FragColor = textureColor.rgba;
+				}
+			}
+		</script>
+
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec3 aVertexNormal;
+			attribute vec2 aTextureCoord;
+
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform mat3 uNMatrix;
+
+			uniform vec3 uLightingDirection;
+			uniform vec3 uDirectionalColor;
+			uniform vec3 uAmbientLightColor;
+
+			varying vec3 vLightWeighting;
+			varying float directionalLightWeighting;
+			varying vec2 vTextureCoord;
+
+			void main(void) {
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				vTextureCoord=aTextureCoord;
+
+				vec3 transformedNormal = uNMatrix * aVertexNormal;
+				directionalLightWeighting = min(max(dot(transformedNormal, uLightingDirection), 0.0),1.0);
+				vLightWeighting = uAmbientLightColor+uDirectionalColor * directionalLightWeighting;
+			}
+		</script>
+	</head>
+	<body onload="new GenderGame('game_container').onStart()" oncontextmenu="return false;">>
+		<canvas width=800 height=600 id='game_container'>your browser does not support webgl :(</canvas>
+	</body>
+</html>
